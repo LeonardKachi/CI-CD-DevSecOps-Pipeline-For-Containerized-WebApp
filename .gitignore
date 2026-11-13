@@ -1,0 +1,49 @@
+# Terraform
+# State files describe the whole infrastructure and can contain secrets. They
+# live in the encrypted S3 bucket and must never be committed.
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Your own values. The *.example files next to them are committed instead.
+*.tfvars
+*.tfvars.json
+backend.hcl
+
+# The provider lock file (.terraform.lock.hcl) is deliberately NOT ignored.
+# Commit it: it pins the exact provider versions, so every run is repeatable.
+
+# Secrets and credentials of any kind
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.p12
+credentials
+.aws/
+
+# Files the Jenkins pipeline creates in its workspace
+image.tar
+trivy-report.json
+taskdef.json
+tunnel.json
+
+# Dependencies and tooling
+node_modules/
+.npm/
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

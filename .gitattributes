@@ -1,0 +1,11 @@
+# Files that run on Linux must keep Unix (LF) line endings, even when checked out
+# on Windows. A Windows line ending inside the Jenkins boot script or the
+# Jenkinsfile would break it with errors like "\r: command not found".
+Jenkinsfile        text eol=lf
+docker/**          text eol=lf
+terraform/**       text eol=lf
+*.tftpl            text eol=lf
+*.sh               text eol=lf
+
+# The game files keep whatever line endings they came with.
+app/**             -text

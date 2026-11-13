@@ -1,0 +1,42 @@
+# Files listed here are never sent to the Docker build.
+#
+# The Dockerfile only copies app/ and docker/nginx.conf, so this file is a
+# second layer of protection: even if a future change to the Dockerfile uses a
+# broader COPY, secrets and infrastructure files still cannot end up inside an
+# image layer. It also keeps the build context small, so builds start faster.
+
+# Version control and CI configuration
+.git
+.gitignore
+.github
+Jenkinsfile
+
+# Secrets and credentials: must never be baked into an image
+.env
+.env.*
+*.pem
+*.key
+*.crt
+
+# Terraform: infrastructure code, state files and variable files
+terraform
+**/.terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+
+# Documentation and diagrams (not needed at runtime)
+docs
+**/*.md
+
+# Editor and operating system files
+.DS_Store
+.vscode
+.idea
+
+# Development-only files inside the game folder.
+# The compiled CSS is kept, the SCSS sources are not needed at runtime.
+# .jshintrc is used by the Jenkins lint stage, which reads it from the repo.
+app/.jshintrc
+app/**/*.scss

@@ -1,0 +1,23 @@
+# Copy this file to terraform.tfvars and edit it. terraform.tfvars is ignored by
+# Git. Every value except alert_email has a sensible default.
+
+region  = "us-east-1"
+project = "webapp-2048"
+
+# alert_email is required and has no default. Terraform asks for it when you run
+# apply. To avoid the prompt, uncomment the line and use your real address.
+# alert_email = "your-address@your-domain"
+
+github_repo_url = "https://github.com/LeonardKachi/CI-CD-DevSecOps-Pipeline-For-Containerized-WebApp.git"
+github_branch   = "main"
+
+# true lets "terraform destroy" remove everything, including images and logs.
+# Set false for real use.
+allow_teardown = true
+
+# Private repository? Create a read-only GitHub token, store it in SSM, and name
+# the parameter here. See "Private repository" in the README.
+# github_token_parameter = "/webapp-2048/github-token"
+
+# Lock the site to your own IP while testing, for example ["203.0.113.7/32"].
+# alb_ingress_cidrs = ["0.0.0.0/0"]

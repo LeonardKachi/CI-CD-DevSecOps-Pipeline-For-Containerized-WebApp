@@ -1,0 +1,156 @@
+#!/bin/bash
+# First-boot setup for the Jenkins server. Runs once, as root, through cloud-init.
+# The full log is kept in /var/log/jenkins-bootstrap.log.
+#
+# Any failure stops the script (set -e). A half-configured Jenkins that looks
+# healthy would be worse than one that visibly failed.
+
+set -euo pipefail
+exec > >(tee /var/log/jenkins-bootstrap.log) 2>&1
+
+echo "== 1. Tools the Jenkinsfile needs: docker, git, jq, Java for Jenkins"
+# curl and the AWS CLI v2 come with the Amazon Linux 2023 image.
+dnf -y install docker git jq fontconfig java-21-amazon-corretto-headless
+
+echo "== 2. Docker: rotate logs so the disk cannot fill up, no privilege escalation by default"
+mkdir -p /etc/docker
+cat > /etc/docker/daemon.json <<'JSON'
+{
+  "log-driver": "json-file",
+  "log-opts": { "max-size": "10m", "max-file": "3" },
+  "no-new-privileges": true,
+  "live-restore": true
+}
+JSON
+systemctl enable --now docker
+
+echo "== 3. Jenkins, from the official repository. Packages install only if their signature verifies."
+curl -fsSL -o /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
+rpm --import ${jenkins_repo_key_url}
+dnf -y install jenkins
+
+# The jenkins user needs Docker to run builds. This is root-equivalent on this
+# host, which is why the host is isolated (private, no inbound, minimal role).
+usermod -aG docker jenkins
+
+echo "== 4. Admin password: generated here, stored encrypted, never in Git or Terraform"
+ADMIN_PASSWORD=$(openssl rand -base64 36 | tr -d '/+=' | cut -c1-28)
+aws ssm put-parameter \
+  --region ${region} \
+  --name ${admin_password_parameter} \
+  --type SecureString \
+  --key-id ${kms_key_arn} \
+  --overwrite \
+  --value "$ADMIN_PASSWORD" > /dev/null
+
+# Readable by root only. systemd reads it and passes it to Jenkins as a variable.
+install -m 600 -o root -g root /dev/null /etc/jenkins-secrets.env
+echo "JENKINS_ADMIN_PASSWORD=$ADMIN_PASSWORD" > /etc/jenkins-secrets.env
+unset ADMIN_PASSWORD
+
+%{ if github_token_parameter != "" ~}
+echo "== 4b. Private repository: read the read-only GitHub token (never written to the log)"
+GITHUB_TOKEN=$(aws ssm get-parameter --region ${region} --name ${github_token_parameter} --with-decryption --query Parameter.Value --output text)
+echo "GITHUB_TOKEN=$GITHUB_TOKEN" >> /etc/jenkins-secrets.env
+unset GITHUB_TOKEN
+
+%{ endif ~}
+
+echo "== 5. Jenkins service: listen on localhost only, skip the setup wizard, load config as code"
+mkdir -p /etc/systemd/system/jenkins.service.d
+cat > /etc/systemd/system/jenkins.service.d/override.conf <<'UNIT'
+[Service]
+Environment="JENKINS_LISTEN_ADDRESS=127.0.0.1"
+Environment="CASC_JENKINS_CONFIG=/var/lib/jenkins/casc"
+Environment="JAVA_OPTS=-Djava.awt.headless=true -Djenkins.install.runSetupWizard=false"
+EnvironmentFile=/etc/jenkins-secrets.env
+UNIT
+
+echo "== 6. Plugins, with the installer verified by checksum before it runs"
+curl -fsSL -o /tmp/jenkins-plugin-manager.jar \
+  https://github.com/jenkinsci/plugin-installation-manager-tool/releases/download/${plugin_manager_version}/jenkins-plugin-manager-${plugin_manager_version}.jar
+echo "${plugin_manager_sha256}  /tmp/jenkins-plugin-manager.jar" | sha256sum -c -
+
+mkdir -p /var/lib/jenkins/plugins /var/lib/jenkins/casc
+java -jar /tmp/jenkins-plugin-manager.jar \
+  --war /usr/share/java/jenkins.war \
+  --plugin-download-directory /var/lib/jenkins/plugins \
+  --plugins configuration-as-code job-dsl workflow-aggregator git timestamper
+rm -f /tmp/jenkins-plugin-manager.jar
+
+echo "== 7. Jenkins configuration as code: security, settings, and the pipeline job"
+cat > /var/lib/jenkins/casc/jenkins.yaml <<'YAML'
+jenkins:
+  systemMessage: "${project} CI/CD. Created by Terraform. Changes made in this UI are lost when the server is rebuilt."
+  numExecutors: 1
+  # No build agents are used, so the inbound agent port is closed.
+  slaveAgentPort: -1
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          password: "$${JENKINS_ADMIN_PASSWORD}"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+  # The settings the Jenkinsfile reads. None of them is a secret.
+  globalNodeProperties:
+    - envVars:
+        env:
+          - key: "AWS_REGION"
+            value: "${region}"
+          - key: "ECR_REPOSITORY"
+            value: "${ecr_repository_name}"
+          - key: "ECS_CLUSTER"
+            value: "${ecs_cluster_name}"
+          - key: "ECS_SERVICE"
+            value: "${ecs_service_name}"
+          - key: "ALB_NAME"
+            value: "${alb_name}"
+%{ if github_token_parameter != "" ~}
+# The read-only token for the private repository. It comes from the environment
+# file written above, and Jenkins keeps it in its encrypted credential store.
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - usernamePassword:
+              id: "github-readonly"
+              scope: GLOBAL
+              description: "Read-only token for the private repository"
+              username: "x-access-token"
+              password: "$${GITHUB_TOKEN}"
+%{ endif ~}
+jobs:
+  - script: |
+      pipelineJob('${project}-pipeline') {
+        description('Builds, tests, scans and deploys the 2048 container.')
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('${github_repo_url}')
+%{ if github_token_parameter != "" ~}
+                  credentials('github-readonly')
+%{ endif ~}
+                }
+                branch('*/${github_branch}')
+              }
+            }
+            scriptPath('Jenkinsfile')
+            lightweight(true)
+          }
+        }
+        triggers { scm('H/2 * * * *') }
+      }
+YAML
+
+chown -R jenkins:jenkins /var/lib/jenkins
+
+echo "== 8. Start Jenkins"
+systemctl daemon-reload
+systemctl enable --now jenkins
+
+echo "== Bootstrap finished. Jenkins is listening on 127.0.0.1:8080 and will run its first build after its first GitHub poll."
