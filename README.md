@@ -303,6 +303,7 @@ Screenshots from the AWS console, taken after `terraform apply` in us-east-1.
 
 | What it shows | Screenshot |
 |---|---|
+| The **preflight validation script** confirming that the GitHub repository, required project files, Terraform, AWS CLI, Session Manager plugin, AWS credentials, Docker Hub images, and Jenkins signing key are all available and passing checks | ![Preflight Checks](docs/PreFlight.png) |
 | The private registry `webapp-2048` with **immutable tags** and **KMS encryption** | ![ECR repository](docs/ECR%20Private%20Repository.png) |
 | The **lifecycle policy**: untagged images removed after 1 day, only the newest 10 kept | ![ECR lifecycle policy](docs/ECR%20Livecycle%20Policy.png) |
 | The **two explicit deny statements** that lock push and pull to the pipeline and the running service | ![ECR permissions](docs/ECR%20Permissions.png) |
