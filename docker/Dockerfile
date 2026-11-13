@@ -9,6 +9,11 @@
 ARG NGINX_VERSION=1.29.5
 FROM nginxinc/nginx-unprivileged:${NGINX_VERSION}-alpine-slim
 
+# Upgrade Alpine packages to include available security fixes.
+# This runs as root during the image build.
+USER root
+RUN apk upgrade --no-cache
+
 LABEL org.opencontainers.image.title="2048 WebApp" \
       org.opencontainers.image.description="Hardened Nginx container serving the 2048 game" \
       org.opencontainers.image.authors="Kachi (github.com/LeonardKachi)" \
