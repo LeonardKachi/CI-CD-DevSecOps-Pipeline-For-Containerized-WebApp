@@ -321,13 +321,6 @@ table above.
 | A **second build** after a change, deployed without downtime | ![Second build](docs/jenkins-second-build.png) |
 -->
 
-**Not yet verified**
-
-- The pipeline running end to end: Jenkins loading its configuration, a real Docker build, the Trivy scan, the push to ECR, and the deployment
-- Fargate behaviour with the read-only filesystem and the `/tmp` helper container
-- Alarm and email delivery
-- Reading a private repository with the read-only token
-
 ## Known limitations and improvements
 
 - **HTTPS** on the load balancer (see decision 3).
