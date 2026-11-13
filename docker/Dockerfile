@@ -6,7 +6,7 @@
 # - "nginx-unprivileged" runs as a non-root user and listens on port 8080.
 # - "alpine-slim" ships the smallest package set, so there is less to patch
 #   and less for an attacker to use.
-ARG NGINX_VERSION=1.29.5
+ARG NGINX_VERSION=1.31.7
 FROM nginxinc/nginx-unprivileged:${NGINX_VERSION}-alpine-slim
 
 # Upgrade Alpine packages to include available security fixes.
