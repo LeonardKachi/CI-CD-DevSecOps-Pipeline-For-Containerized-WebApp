@@ -309,6 +309,7 @@ Screenshots from the AWS console, taken after `terraform apply` in us-east-1.
 | The **Jenkins server**: no public IP, private tooling subnet, IMDSv2 required, dedicated role | ![Jenkins EC2 instance](docs/Jenkins%20EC2%20Instance.png) |
 | The **internet-facing load balancer**, active across two Availability Zones | ![Load balancer](docs/Load%20Balancer.png) |
 | The **CloudWatch dashboard** showing application traffic, response status, response times, ECS task health, CPU and memory usage, and alarm status | ![CloudWatch Dashboard](docs/Dashboard.png) |
+| The **Jenkins CI/CD pipeline** showing all eight stages successfully completed, from checkout and security scanning to ECS deployment and smoke testing | ![Jenkins Pipeline Success](docs/Jenkins-Pipeline-Success.png) |
 | The **Amazon ECR image repository** showing the successfully pushed container image, image tag, digest, and vulnerability scan results | ![ECR Image](docs/ECR%20Image.png) |
 | The **Amazon ECS cluster** showing the active service, Fargate launch type, and two running tasks | ![ECS Cluster](docs/ECS%20Cluster.png) |
 | The **deployed 2048 web application** running successfully through the internet-facing Application Load Balancer | ![2048 Gameplay](docs/GamePlay.png) |
