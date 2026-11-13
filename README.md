@@ -236,7 +236,7 @@ Terraform asks for `alert_email`. Use your real address: placeholder addresses a
 
 1. Click the AWS confirmation link in your email, or no alarm will reach you.
 2. Wait about 10 minutes for Jenkins to finish its first-boot setup.
-3. Run `bash scripts/jenkins.sh tunnel`, browse to `http://localhost:8080`, and log in as `admin`. `bash scripts/jenkins.sh password` prints the password. Run these on your own computer, not inside the server shell.
+3. Run `cd ..` then `bash scripts/jenkins.sh tunnel`, browse to `http://localhost:8080`, and log in as `admin`. `bash scripts/jenkins.sh password` prints the password. Run these on your own computer, not inside the server shell.
 
    On Windows PowerShell, where the script is not available, the quoted JSON gets mangled. Use a file instead:
 
